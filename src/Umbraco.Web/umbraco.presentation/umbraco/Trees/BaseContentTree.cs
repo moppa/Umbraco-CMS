@@ -325,7 +325,7 @@ function openContent(id) {
         
         protected void SetProtectedAttribute(ref XmlTreeNode treeElement, Document dd)
         {
-            if (Access.IsProtected(dd.Id, dd.Path))
+            if (Access.IsProtectedAtAll(dd.Id, dd.Path))
                 treeElement.IsProtected = true;
             else
                 treeElement.IsProtected = false;
@@ -394,7 +394,7 @@ function openContent(id) {
 
         internal void SetProtectedAttribute(ref XmlTreeNode treeElement, UmbracoEntity dd)
         {
-            if (Access.IsProtected(dd.Id, dd.Path))
+            if (Access.IsProtectedAtAll(dd.Id, dd.Path))
                 treeElement.IsProtected = true;
             else
                 treeElement.IsProtected = false;

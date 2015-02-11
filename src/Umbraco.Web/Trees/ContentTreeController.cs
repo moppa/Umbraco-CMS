@@ -106,7 +106,7 @@ namespace Umbraco.Web.Trees
                 if (entity.HasPendingChanges)
                     node.SetHasUnpublishedVersionStyle();
 
-                if (Access.IsProtected(e.Id, e.Path))
+                if (Access.IsProtectedAtAll(e.Id, e.Path))
                     node.SetProtectedStyle();
 
                 return node;
