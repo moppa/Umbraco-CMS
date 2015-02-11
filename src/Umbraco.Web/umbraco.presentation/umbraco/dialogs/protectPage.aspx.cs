@@ -13,6 +13,7 @@ using umbraco.controls;
 using umbraco.cms.helpers;
 using umbraco.BasePages;
 using Umbraco.Core.Security;
+using System.Collections.Generic;
 
 namespace umbraco.presentation.umbraco.dialogs
 {
@@ -78,7 +79,14 @@ namespace umbraco.presentation.umbraco.dialogs
 
             if (IsPostBack == false)
             {
-                if (Access.IsProtected(documentId, documentObject.Path) && Access.GetProtectionType(documentId) != ProtectionType.NotProtected)
+                ddl_domain.Items.Add(new ListItem("All domains", "*"));
+                foreach (string domain in GetRecursiveDomain(documentId))
+                {
+                    ddl_domain.Items.Add(new ListItem(domain, domain));
+                }
+
+
+                if (Access.IsProtectedAtAll(documentId, documentObject.Path) && Access.GetProtectionType(documentId) != ProtectionType.NotProtected)
                 {
                     bt_buttonRemoveProtection.Visible = true;
                     bt_buttonRemoveProtection.Attributes.Add("onClick", "return confirm('" + ui.Text("areyousure") + "')");
@@ -86,6 +94,17 @@ namespace umbraco.presentation.umbraco.dialogs
                     // Get login and error pages
                     int errorPage = Access.GetErrorPage(documentObject.Path);
                     int loginPage = Access.GetLoginPage(documentObject.Path);
+                    string domain = Access.GetDomain(documentObject.Path);
+
+                    try
+                    {
+                        ddl_domain.SelectedValue = domain;
+                    }
+                    catch (Exception ex)
+                    {
+                        LogHelper.Error<protectPage>("An error occurred initializing the domain on the protect page editor", ex);
+                    }
+
                     try
                     {
                         var loginPageObj = new Document(loginPage);
@@ -242,13 +261,13 @@ namespace umbraco.presentation.umbraco.dialogs
                         Roles.AddUserToRole(member.UserName, simpleRoleName);
                     }
 
-                    Access.ProtectPage(true, pageId, int.Parse(loginPagePicker.Value), int.Parse(errorPagePicker.Value));
+                    Access.ProtectPage(true, pageId, int.Parse(loginPagePicker.Value), int.Parse(errorPagePicker.Value),ddl_domain.SelectedValue);
                     Access.AddMembershipRoleToDocument(pageId, simpleRoleName);
                     Access.AddMembershipUserToDocument(pageId, member.UserName);
                 }
                 else if (e.CommandName == "advanced")
                 {
-                    Access.ProtectPage(false, pageId, int.Parse(loginPagePicker.Value), int.Parse(errorPagePicker.Value));
+                    Access.ProtectPage(false, pageId, int.Parse(loginPagePicker.Value), int.Parse(errorPagePicker.Value),ddl_domain.SelectedValue);
 
                     foreach (ListItem li in _memberGroups.Items)
                         if (("," + _memberGroups.Value + ",").IndexOf("," + li.Value + ",", StringComparison.Ordinal) > -1)
@@ -284,6 +303,25 @@ namespace umbraco.presentation.umbraco.dialogs
             ClientTools.ReloadActionNode(true, false);
 
             feedback.type = global::umbraco.uicontrols.Feedback.feedbacktype.success;
+        }
+
+        private List<string> GetRecursiveDomain(int Id)
+        {
+            Umbraco.Core.Models.IContent node = ApplicationContext.Current.Services.ContentService.GetById(Id);
+            if (node != null)
+            {
+                List<string> domains = Domain.GetDomainsById(node.Id).Select(x => x.Name).ToList();
+
+                if (node.ParentId > 0)
+                {
+                    IEnumerable<string> res = GetRecursiveDomain(node.ParentId);
+                    domains.AddRange(res);
+                }
+
+                return domains;
+            }
+
+            return new List<string>();
         }
 
         protected CustomValidator SimpleLoginNameValidator;
@@ -568,6 +606,33 @@ namespace umbraco.presentation.umbraco.dialogs
         /// </remarks>
         protected global::System.Web.UI.WebControls.PlaceHolder js;
 
+        /// <summary>
+        /// ddl_domain control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.DropDownList ddl_domain;
+
+        /// <summary>
+        /// pp_domain control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::umbraco.uicontrols.PropertyPanel pp_domain;
+
+        /// <summary>
+        /// lbl_domain control.
+        /// </summary>
+        /// <remarks>
+        /// Auto-generated field.
+        /// To modify move field declaration from designer file to code-behind file.
+        /// </remarks>
+        protected global::System.Web.UI.WebControls.Label lbl_domain;
+        
 
     }
 }

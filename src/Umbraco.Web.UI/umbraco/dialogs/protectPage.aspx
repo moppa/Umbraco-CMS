@@ -167,6 +167,11 @@
                 <br />
             </cc1:PropertyPanel>
 
+            <cc1:PropertyPanel Text="Domain" ID="pp_domain" runat="server">
+                <asp:DropDownList runat="server" ID="ddl_domain" Width="150px" ></asp:DropDownList>
+                <asp:Label runat="server" ID="lbl_domain" Visible="False"></asp:Label>
+            </cc1:PropertyPanel>
+
         </cc1:Pane>
 
 

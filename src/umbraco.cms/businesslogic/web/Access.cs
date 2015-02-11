@@ -269,7 +269,7 @@ namespace umbraco.cms.businesslogic.web
             return hasChange;
         }
 
-        public static void ProtectPage(bool Simple, int DocumentId, int LoginDocumentId, int ErrorDocumentId)
+        public static void ProtectPage(bool Simple, int DocumentId, int LoginDocumentId, int ErrorDocumentId, string Domain)
         {
             var e = new AddProtectionEventArgs();
             new Access().FireBeforeAddProtection(new Document(DocumentId), e);
@@ -296,6 +296,8 @@ namespace umbraco.cms.businesslogic.web
                 x.SetAttribute("loginPage", LoginDocumentId.ToString());
                 x.SetAttribute("noRightsPage", ErrorDocumentId.ToString());
                 x.SetAttribute("simple", Simple.ToString());
+                x.SetAttribute("domain", Domain);
+
                 Save(x.OwnerDocument);
                 ClearCheckPages();
             }
@@ -583,6 +585,14 @@ namespace umbraco.cms.businesslogic.web
             }
         }
 
+        public static bool IsProtectedAtAll(int DocumentId, string Path)
+        {
+            using (new ReadLock(Locker))
+            {
+                return IsProtectedAtAllInternal(DocumentId, Path);
+            }
+        }
+
         public static int GetErrorPage(string Path)
         {
             using (new ReadLock(Locker))
@@ -596,6 +606,24 @@ namespace umbraco.cms.businesslogic.web
             using (new ReadLock(Locker))
             {
                 return int.Parse(GetPage(GetProtectedPage(Path)).Attributes.GetNamedItem("loginPage").Value);
+            }
+        }
+
+        public static string GetDomain(string Path)
+        {
+            using (new ReadLock(Locker))
+            {
+                XmlNode node = GetPage(GetProtectedPage(Path));
+                if(node.Attributes.HasAttribute("domain"))
+                {
+                    string domain = node.Attributes.GetNamedItem("domain").Value;
+                    if (!string.IsNullOrWhiteSpace(domain))
+                    {
+                        return domain;
+                    }
+                }
+
+                return "*";
             }
         } 
         #endregion
@@ -618,6 +646,52 @@ namespace umbraco.cms.businesslogic.web
         }
 
         private static bool IsProtectedInternal(int DocumentId, string Path)
+        {
+            string domain = HttpContext.Current.Request.Url.Host;
+            bool isProtected = false;
+
+            string hashKey = domain + "-" + DocumentId;
+
+            if (CheckedPages.ContainsKey(hashKey) == false)
+            {
+                foreach (string id in Path.Split(','))
+                {
+                    XmlNode node = GetPage(int.Parse(id));
+                    if (node != null)
+                    {
+                        //Check if domain locking has been set
+                        if (node.Attributes.HasAttribute("domain"))
+                        {
+                            //Check if the locking is for the current domain
+                            if (domain.Equals(node.Attributes.GetNamedItem("domain").Value, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                isProtected = true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            //The node is protected for all domains
+                            isProtected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (CheckedPages.ContainsKey(hashKey) == false)
+                {
+                    CheckedPages.Add(hashKey, isProtected);
+                }
+            }
+            else
+            {
+                isProtected = (bool)CheckedPages[hashKey];
+            }
+
+            return isProtected;
+        }
+
+        private static bool IsProtectedAtAllInternal(int DocumentId, string Path)
         {
             //NOTE: No locks here! the locking is done in callers to this method
 
