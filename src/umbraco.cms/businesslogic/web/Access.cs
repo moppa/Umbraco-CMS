@@ -359,7 +359,7 @@ namespace umbraco.cms.businesslogic.web
 
             using (new ReadLock(Locker))
             {
-                if (IsProtectedInternal(documentId, d.Path))
+                if (IsProtectedAtAllInternal(documentId, d.Path))
                 {
                     var currentNode = GetPage(GetProtectedPage(d.Path));
                     if (currentNode.SelectSingleNode("./group [@id='" + role + "']") != null)
@@ -442,7 +442,7 @@ namespace umbraco.cms.businesslogic.web
 
             using (new ReadLock(Locker))
             {
-                if (IsProtectedInternal(documentId, d.Path) == false)
+                if (IsProtectedAtAllInternal(documentId, d.Path) == false)
                     return null;
 
                 if (GetProtectionTypeInternal(documentId) != ProtectionType.Simple)
@@ -670,7 +670,9 @@ namespace umbraco.cms.businesslogic.web
                         if (node.Attributes.HasAttribute("domain"))
                         {
                             //Check if the locking is for the current domain
-                            if (domain.Equals(node.Attributes.GetNamedItem("domain").Value, StringComparison.InvariantCultureIgnoreCase))
+                            if (domain.Equals(node.Attributes.GetNamedItem("domain").Value, StringComparison.InvariantCultureIgnoreCase) 
+                                || 
+                                node.Attributes.GetNamedItem("domain").Value.Equals("*",StringComparison.InvariantCultureIgnoreCase))
                             {
                                 isProtected = true;
                                 break;
